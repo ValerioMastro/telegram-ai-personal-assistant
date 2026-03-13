@@ -1,16 +1,9 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 from datetime import datetime, time
 from pathlib import Path
-from zoneinfo import ZoneInfo
-
-from dotenv import load_dotenv
-
-# Deve avvenire prima di import che leggono env vars.
-load_dotenv()
 
 from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -22,9 +15,17 @@ from telegram.ext import (
     filters,
 )
 
-from agent import agent_reply
+from agent_runtime.assistant import process_user_message
+from agent_runtime.formatters import (
+    format_events as shared_format_events,
+    format_inbox as shared_format_inbox,
+    format_memory as shared_format_memory,
+    format_notes as shared_format_notes,
+    format_tasks as shared_format_tasks,
+)
 from audio_utils import AudioTranscriptionError, transcribe_audio
 from calendar_utils import find_free_slots, get_today_events, get_tomorrow_events
+from config import get_settings
 from conversation_context import (
     get_last_task_list,
     get_pending_action,
@@ -83,7 +84,8 @@ from telegram_ui import (
     build_unresolved_inline_keyboard,
 )
 
-ROME_TZ = ZoneInfo("Europe/Rome")
+SETTINGS = get_settings()
+ROME_TZ = SETTINGS.timezone
 TEMP_DIR = Path(__file__).resolve().parent / "temp"
 
 HELP_TEXT_TRIGGERS = {
@@ -99,6 +101,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+agent_reply = process_user_message
 
 
 def _ensure_owner_chat(update: Update) -> int | None:
@@ -218,80 +221,23 @@ async def _edit_or_send(query: CallbackQuery, text: str, inline_markup=None) -> 
 
 
 def _format_events(events: list[dict], title: str) -> str:
-    if not events:
-        return f"{title}: nessun evento."
-
-    lines = [f"{title}:"]
-    for idx, event in enumerate(events, start=1):
-        summary = event.get("summary", "Senza titolo")
-        start = event.get("start", {})
-
-        if start.get("dateTime"):
-            try:
-                dt = datetime.fromisoformat(start["dateTime"]).astimezone(ROME_TZ)
-                lines.append(f"{idx}. {dt.strftime('%H:%M')} | {summary}")
-            except Exception:
-                lines.append(f"{idx}. {summary}")
-        elif start.get("date"):
-            lines.append(f"{idx}. Tutto il giorno | {summary}")
-        else:
-            lines.append(f"{idx}. {summary}")
-
-    return "\n".join(lines)
+    return shared_format_events(events, title)
 
 
 def _format_tasks(tasks: list[dict], title: str) -> str:
-    if not tasks:
-        return f"{title}: nessun task."
-
-    lines = [f"{title}:"]
-    for idx, task in enumerate(tasks, start=1):
-        due = ""
-        if task.get("due_date"):
-            due = f" | scadenza {task.get('due_date')}"
-            if task.get("due_time"):
-                due += f" {task.get('due_time')}"
-
-        lines.append(
-            f"{idx}. [{task.get('id')}] {task.get('title')} "
-            f"({task.get('category', 'personale')}, {task.get('priority', 'media')}){due}"
-        )
-    return "\n".join(lines)
+    return shared_format_tasks(tasks, title)
 
 
 def _format_notes(notes: list[dict]) -> str:
-    if not notes:
-        return "Nessuna nota salvata."
-
-    lines = ["Note recenti:"]
-    for note in notes:
-        lines.append(
-            f"- [{note.get('id')}] ({note.get('category', 'personale')}, {note.get('priority', 'media')}) {note.get('content')}"
-        )
-    return "\n".join(lines)
+    return shared_format_notes(notes, label="Note recenti")
 
 
 def _format_memory(items: list[dict]) -> str:
-    if not items:
-        return "Nessuna memoria salvata."
-
-    lines = ["Memorie salvate:"]
-    for item in items:
-        lines.append(f"- {item.get('key')}: {item.get('value')}")
-    return "\n".join(lines)
+    return shared_format_memory(items, label="Memorie salvate")
 
 
 def _format_inbox(items: list[dict]) -> str:
-    if not items:
-        return "Inbox vuota."
-
-    lines = ["Inbox:"]
-    for idx, item in enumerate(items, start=1):
-        lines.append(
-            f"{idx}. [{item.get('id')}] {item.get('content')} "
-            f"({item.get('category', 'personale')}, {item.get('priority', 'media')})"
-        )
-    return "\n".join(lines)
+    return shared_format_inbox(items, label="Inbox")
 
 
 def _build_unresolved_text(tasks: list[dict] | None = None) -> str:
@@ -1137,9 +1083,7 @@ async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def _build_application():
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-    if not token:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN non trovata nel file .env")
+    token = SETTINGS.telegram_bot_token
 
     app = ApplicationBuilder().token(token).build()
 

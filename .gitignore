@@ -1,29 +1,36 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-
-# Virtual env
+# Environment
+.env
 .venv/
 venv/
 
-# Environment
-.env
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# Database
+# macOS
+.DS_Store
+__MACOSX/
+
+# Temp/runtime
+temp/
+.pytest_cache/
+.pycache_local/
+coverage.xml
+htmlcov/
+
+# SQLite runtime files
+agent.db
+agent.db-shm
+agent.db-wal
 *.db
 *.sqlite
 
-# Logs
-*.log
-
-# Mac
-.DS_Store
-
-# Temp
-temp/
-
-# Secrets
-credentials.json
+# Google OAuth secrets/runtime
 token.json
+credentials.json
+
+# Logs / misc
+*.log
 *.key

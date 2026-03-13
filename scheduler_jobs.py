@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from calendar_utils import get_upcoming_events
+from config import get_settings
 from db import get_setting, set_setting
 from summary_tools import build_evening_summary, build_morning_summary
 from task_tools import get_due_tasks_for_reminder, mark_task_reminder_sent
@@ -13,7 +13,7 @@ from telegram_ui import (
     build_snooze_keyboard,
 )
 
-ROME_TZ = ZoneInfo("Europe/Rome")
+ROME_TZ = get_settings().timezone
 
 
 def set_owner_chat_id(chat_id: int) -> None:

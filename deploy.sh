@@ -8,6 +8,7 @@ SERVER_USER="opc"
 SERVER_HOST="84.8.249.203"
 SERVER_PATH="~/telegrambot/telegram-calendar-agent"
 LOCAL_PATH="${HOME}/telegram-calendar-agent"
+PYTHON_BIN="python3.11"
 
 # Metti qui il path ESATTO della tua chiave SSH
 SSH_KEY="${HOME}/Downloads/ssh-key-2026-03-13.key"
@@ -55,7 +56,7 @@ echo
 # =========================
 # Update server
 # =========================
-ssh -i "${SSH_KEY}" "${SERVER_USER}@${SERVER_HOST}" << 'EOF'
+ssh -i "${SSH_KEY}" "${SERVER_USER}@${SERVER_HOST}" "PYTHON_BIN='${PYTHON_BIN}' bash -s" << 'EOF'
 set -Eeuo pipefail
 
 cd ~/telegrambot/telegram-calendar-agent
@@ -63,9 +64,14 @@ cd ~/telegrambot/telegram-calendar-agent
 echo "📁 Cartella corrente:"
 pwd
 
+if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
+  echo "❌ ${PYTHON_BIN} non trovato sul server. Installa Python 3.11 prima del deploy."
+  exit 1
+fi
+
 if [[ ! -d ".venv" ]]; then
   echo "⚠️ .venv non trovato, lo creo..."
-  python3 -m venv .venv
+  "${PYTHON_BIN}" -m venv .venv
 fi
 
 source .venv/bin/activate

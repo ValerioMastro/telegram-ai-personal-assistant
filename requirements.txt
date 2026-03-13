@@ -1,7 +1,10 @@
-python-telegram-bot[job-queue]
-python-dotenv
-google-genai
+datapizza-ai
+datapizza-ai-clients-google
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
+google-genai
+pytest
+python-dotenv
+python-telegram-bot[job-queue]
 tzdata
