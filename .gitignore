@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+.venv/
+venv/
+
+# Environment
+.env
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# Mac
+.DS_Store
+
+# Temp
+temp/
+
+# Secrets
+credentials.json
+token.json
+*.key
